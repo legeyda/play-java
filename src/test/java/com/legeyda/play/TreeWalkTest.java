@@ -3,8 +3,8 @@ package com.legeyda.play;
 import com.legeyda.play.tree.TreeNode;
 import com.legeyda.play.tree.walk.BreadFirstNonRecursive;
 import com.legeyda.play.tree.walk.PreorderNonRecursive;
-import com.legeyda.play.tree.walk.InorderNonRecursive;
-import com.legeyda.play.tree.walk.InorderNonRecursive2;
+import com.legeyda.play.tree.walk.InorderIterative;
+import com.legeyda.play.tree.walk.InorderIterative2;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -41,13 +41,13 @@ public class TreeWalkTest {
 	@Test
 	public void testInorderNonRecursive() {
 		final ArrayList<Integer> trace = new ArrayList<>(7);
-		new InorderNonRecursive<Integer>().walk(sampleTree, treeNode -> trace.add(treeNode.value));
+		new InorderIterative<Integer>().walk(sampleTree, treeNode -> trace.add(treeNode.value));
 		Assertions.assertIterableEquals(Arrays.asList(2, 5, 7, 10, 12, 15, 17), trace);
 	}
 	@Test
 	public void testInorderNonRecursive2() {
 		final ArrayList<Integer> trace = new ArrayList<>(7);
-		new InorderNonRecursive2<Integer>().walk(sampleTree, treeNode -> trace.add(treeNode.value));
+		new InorderIterative2<Integer>().walk(sampleTree, treeNode -> trace.add(treeNode.value));
 		Assertions.assertIterableEquals(Arrays.asList(2, 5, 7, 10, 12, 15, 17), trace);
 	}
 }
