@@ -67,11 +67,18 @@ public class BinaryTreeSetTest {
 		testee.add(50);
 		testee.add(150);
 		testee.add(75);
+		testee.add(60);
+		testee.add(61);
 
 		final StringBuilder builder = new StringBuilder();
 		testee.print(str->builder.append(str));
 
-		assertThat(builder.toString()).isEqualTo("");
+		assertThat(builder.toString()).isEqualTo(
+"       100\n" +
+"50       150\n" +
+"      75\n" +
+"  60\n" +
+"    61");
 	}
 
 }

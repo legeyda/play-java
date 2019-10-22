@@ -54,18 +54,14 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			final TreeEvalResult eval = this.eval();
 
 			int charsWritten = 0;
-			for(; charsWritten<(eval.totalWidth-eval.lavelWidth+1)/2; charsWritten++) {
+			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2; charsWritten++) {
 				printer.accept(" ");
 			}
 			printer.accept(eval.label);
-			charsWritten+=eval.lavelWidth;
-			if(this.thisIsRightmostNodeInARow) {
-				printer.accept("\n");
-			} else {
-				while (charsWritten < eval.totalWidth) {
-					charsWritten++;
-					printer.accept(" ");
-				}
+			charsWritten+=eval.labelWidth;
+			while (charsWritten < eval.totalWidth) {
+				charsWritten++;
+				printer.accept(" ");
 			}
 
 			outputQueue.offer(eval.leftSubtree);
@@ -89,16 +85,13 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 
 			result.label = node.value.toString();
-			result.lavelWidth = result.label.length() ;
-			if (result.lavelWidth == 0) {
+			result.labelWidth = result.label.length() ;
+			if (result.labelWidth == 0) {
 				throw new AssertionError("something wrong: empty string");
 			}
 
 			// для симметрии, если в надписи чётное число символов, между поддеревьями делаем 2 пробела, иначе 1
-			result.subtreeInterval = (0 == result.lavelWidth % 2 ? 2 : 1);
-
-
-			result.totalWidth = 0;
+			result.subtreeInterval = (0 == result.labelWidth % 2 ? 2 : 1);
 
 			if(node.left!=null) {
 				final PrintTree subtree = new PrintTree(node.left, false);
@@ -106,7 +99,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				result.leftSubtreeWidth = subtree.eval().totalWidth;
 				result.toBeContinued = true;
 			} else {
-				result.leftSubtreeWidth = (result.lavelWidth - result.subtreeInterval) / 2;
+				result.leftSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
 				result.leftSubtree = new Placeholder(result.leftSubtreeWidth);
 			}
 
@@ -116,7 +109,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				result.rightSubtreeWidth = subtree.eval().totalWidth;
 				result.toBeContinued = true;
 			} else {
-				result.rightSubtreeWidth = (result.lavelWidth - result.subtreeInterval) / 2;
+				result.rightSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
 				result.rightSubtree = new Placeholder(result.rightSubtreeWidth);
 			}
 
@@ -127,7 +120,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	}
 
 	private class TreeEvalResult {
-		int totalWidth =0, lavelWidth =0, subtreeInterval=0, leftSubtreeWidth =0, rightSubtreeWidth =0;
+		int totalWidth =0, labelWidth =0, subtreeInterval=0, leftSubtreeWidth =0, rightSubtreeWidth =0;
 		PrintNode<T> leftSubtree, rightSubtree;
 		boolean toBeContinued = false;
 		String label = "";
@@ -157,7 +150,6 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 		}
 	}
-
 
 
     TreeNode<T> root = null;
@@ -284,6 +276,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				inputQueue = outputQueue;
 				outputQueue = temp;
 				toBeContinued = false;
+				internalPrinter.accept("\n");
 			}
 			PrintNode<T> entity = inputQueue.poll();
 			if(entity!=null) {
