@@ -1,8 +1,11 @@
 package com.legeyda.play.tree;
 
+import com.google.common.collect.Lists;
+
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
@@ -10,18 +13,18 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	 * абстрактный элемент для печати дерева:
 	 * может быть либо нодой исходного дерева, либо пробельными промежутками между ними
 	 */
-	private interface PrintNode<T> extends BiFunction<Consumer<String>, Queue<PrintNode<T>>, Boolean> {
+	private abstract static class PrintNode implements BiFunction<Consumer<String>, Queue<PrintNode>, Boolean> {
 		/** мега метод для печати дерева:
 		 *  печатает в printer текущую строку и заполняет очередь следующего уровня
 		 *  (как обход дерева в ширину)
 		 *  @return true если это нода и у неё есть потомки, false - если просто промежуток пробелов
 		 */
 		@Override
-		Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue);
+		abstract public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue);
 	}
 
 	/** печать промежутка между деревьями */
-	private class Whitespace implements PrintNode<T> {
+	private static class Whitespace extends PrintNode {
 		private final int width;
 
 		public Whitespace(int length) {
@@ -29,91 +32,28 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 
 		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue) {
-			for(int i = 0; i<this.width; i++) {
-				printer.accept(" ");
-			}
-			outputQueue.add(this);
+		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+			Collections.nCopies(this.width, " ").forEach(printer);
 			return false;
 		}
 	}
 
-	/** для читаемости добавляем линию под нодой */
-	private class Pattern implements PrintNode<T> {
-		private final Character symbol;
-		private final int width;
-		private final Collection<PrintNode<T>> children;
+	private abstract class AbstractPrintTree extends PrintNode {
 
+		final TreeNode node;
+		final TreeEvalResult eval;
 
-		private Pattern(Character symbol, int width, Collection<PrintNode<T>> children) {
-			this.symbol = symbol;
-			this.width = width;
-			this.children = children;
-		}
-
-		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue) {
-			for(int i=0; i<this.width; i++) {
-				printer.accept("-");
-			}
-			outputQueue.addAll(this.children);
-			return true;
-		}
-	}
-
-	private class LeftBar implements PrintNode<T> {
-
-
-
-		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue) {
-			return null;
-		}
-
-	}
-
-
-
-	// todo rightmost
-	private class PrintTree implements PrintNode<T> {
-
-		private final TreeNode<T> node;
-
-		public PrintTree(TreeNode<T> node) {
+		public AbstractPrintTree(TreeNode node) {
 			this.node = node;
+			this.eval = this.doEval();
 		}
 
-		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue) {
-			final TreeEvalResult eval = this.eval();
-
-			int charsWritten = 0;
-			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2; charsWritten++) {
-				printer.accept(" ");
-			}
-			printer.accept(eval.label);
-			charsWritten+=eval.labelWidth;
-			while (charsWritten < eval.totalWidth) {
-				charsWritten++;
-				printer.accept(" ");
-			}
-
-			final Collection<PrintNode<T>> children = Arrays.asList(
-					eval.leftSubtree,
-					new Whitespace(eval.subtreeInterval),
-					eval.rightSubtree);
-
-			if(this.node.left!=null || this.node.right!=null) {
-				outputQueue.add(new Pattern(eval.totalWidth, children));
-			} else {
-				outputQueue.addAll(children);
-			}
-
-
-			return eval.toBeContinued;
+		public AbstractPrintTree(TreeNode node, TreeEvalResult eval) {
+			this.node = node;
+			this.eval = eval;
 		}
 
-		private TreeEvalResult eval() {
+		private TreeEvalResult doEval() {
 			// Здесь мы рекурсивно находим ширину каждого поддерева. Нужно ли её кэшировать?
 			// Сравним сложность вычисления ширины каждого поддерева:
 			// без кэширования: время O(n*log(n)) место O(1),
@@ -136,9 +76,9 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			result.subtreeInterval = (0 == result.labelWidth % 2 ? 2 : 1);
 
 			if(node.left!=null) {
-				final PrintTree subtree = new PrintTree(node.left);
+				final AbstractPrintTree subtree = new PrintLeftSubtree(node.left);
 				result.leftSubtree = subtree;
-				result.leftSubtreeWidth = subtree.eval().totalWidth;
+				result.leftSubtreeWidth = subtree.eval.totalWidth;
 				result.toBeContinued = true;
 			} else {
 				result.leftSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
@@ -146,9 +86,9 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 
 			if(node.right!=null) {
-				final PrintTree subtree = new PrintTree(node.right);
+				final AbstractPrintTree subtree = new PrintRightSubtree(node.right);
 				result.rightSubtree = subtree;
-				result.rightSubtreeWidth = subtree.eval().totalWidth;
+				result.rightSubtreeWidth = subtree.eval.totalWidth;
 				result.toBeContinued = true;
 			} else {
 				result.rightSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
@@ -161,9 +101,96 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 	}
 
+	private class PrintTree extends AbstractPrintTree {
+
+		public PrintTree(TreeNode node) {
+			super(node);
+		}
+
+		public PrintTree(TreeNode node, TreeEvalResult eval) {
+			super(node, eval);
+		}
+
+		@Override
+		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+
+			int charsWritten = 0;
+			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2; charsWritten++) {
+				printer.accept(" ");
+			}
+			printer.accept(eval.label);
+			charsWritten+=eval.labelWidth;
+			while (charsWritten < eval.totalWidth) {
+				charsWritten++;
+				printer.accept(" ");
+			}
+
+			outputQueue.add(eval.leftSubtree);
+			outputQueue.add(new PrintNode() {
+				@Override
+				public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+					for(int i=0; i<eval.subtreeInterval; i++) {
+						printer.accept("-");
+					}
+					outputQueue.offer(new Whitespace(eval.subtreeInterval));
+					return true;
+				}
+			});
+			outputQueue.add(eval.rightSubtree);
+
+			return eval.toBeContinued;
+		}
+	}
+
+	private class PrintLeftSubtree extends AbstractPrintTree {
+		public PrintLeftSubtree(TreeNode node) {
+			super(node);
+		}
+
+		@Override
+		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+			int charsWritten = 0;
+			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2; charsWritten++) {
+				printer.accept(" ");
+			}
+			while (charsWritten < eval.totalWidth) {
+				charsWritten++;
+				printer.accept("-");
+			}
+
+			outputQueue.offer(new PrintTree(node, eval));
+			return true;
+		}
+	}
+
+	private class PrintRightSubtree extends AbstractPrintTree {
+		public PrintRightSubtree(TreeNode node) {
+			super(node);
+		}
+
+		public PrintRightSubtree(TreeNode node, TreeEvalResult eval) {
+			super(node, eval);
+		}
+
+		@Override
+		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+			int charsWritten = 0;
+			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2 + eval.labelWidth; charsWritten++) {
+				printer.accept("-");
+			}
+			while (charsWritten < eval.totalWidth) {
+				charsWritten++;
+				printer.accept(" ");
+			}
+
+			outputQueue.offer(new PrintTree(node, eval));
+			return true;
+		}
+	}
+
 	private class TreeEvalResult {
 		int totalWidth =0, labelWidth =0, subtreeInterval=0, leftSubtreeWidth =0, rightSubtreeWidth =0;
-		PrintNode<T> leftSubtree, rightSubtree;
+		PrintNode leftSubtree, rightSubtree;
 		boolean toBeContinued = false;
 		String label = "";
 	}
@@ -195,7 +222,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
 
 
-	TreeNode<T> root = null;
+	TreeNode root = null;
 
 	@Override
 	public boolean add(T value) {
@@ -233,7 +260,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		return find((T)value, this.root).isPresent();
 	}
 
-	private Optional<TreeNode<T>> find(final T value, final TreeNode<T> node) {
+	private Optional<TreeNode> find(final T value, final TreeNode<T> node) {
 		if(node==null) {
 			return Optional.empty();
 		} else {
@@ -256,8 +283,8 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
 	public Iterator<T> inorderIterator() {
 		return new Iterator<T>() {
-			final Stack<TreeNode<T>> stack = new Stack<>();
-			TreeNode<T> node = BinaryTreeSet.this.root;
+			final Stack<TreeNode> stack = new Stack<>();
+			TreeNode node = BinaryTreeSet.this.root;
 
 			@Override
 			public boolean hasNext() {
@@ -285,7 +312,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		return this.size(this.root);
 	}
 
-	private int size(final TreeNode<T> node) {
+	private int size(final TreeNode node) {
 		return node==null ? 0 : 1 + size(node.left) + size(node.right);
 	}
 
@@ -303,8 +330,8 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		if(this.root==null) {
 			return;
 		}
-		Queue<PrintNode<T>> inputQueue = new LinkedList<>();
-		Queue<PrintNode<T>> outputQueue = new LinkedList<>();
+		Queue<PrintNode> inputQueue = new LinkedList<>();
+		Queue<PrintNode> outputQueue = new LinkedList<>();
 		inputQueue.add(new PrintTree(root));
 		boolean toBeContinued = false;
 		while(true) {
@@ -315,13 +342,13 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				if(outputQueue.isEmpty()) {
 					break;
 				}
-				Queue<PrintNode<T>> temp = inputQueue;
+				Queue<PrintNode> temp = inputQueue;
 				inputQueue = outputQueue;
 				outputQueue = temp;
 				toBeContinued = false;
 				internalPrinter.accept("\n");
 			}
-			PrintNode<T> entity = inputQueue.poll();
+			PrintNode entity = inputQueue.poll();
 			if(entity!=null) {
 				toBeContinued |= entity.apply(internalPrinter, outputQueue);
 			}
