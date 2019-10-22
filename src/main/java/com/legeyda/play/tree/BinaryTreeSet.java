@@ -21,16 +21,16 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	}
 
 	/** печать промежутка между деревьями */
-	private class Placeholder implements PrintNode<T> {
-		private final int length;
+	private class Whitespace implements PrintNode<T> {
+		private final int width;
 
-		public Placeholder(int length) {
-			this.length = length;
+		public Whitespace(int length) {
+			this.width = length;
 		}
 
 		@Override
 		public Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue) {
-			for(int i=0; i<this.length; i++) {
+			for(int i = 0; i<this.width; i++) {
 				printer.accept(" ");
 			}
 			outputQueue.add(this);
@@ -38,15 +38,49 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 	}
 
+	/** для читаемости добавляем линию под нодой */
+	private class Pattern implements PrintNode<T> {
+		private final Character symbol;
+		private final int width;
+		private final Collection<PrintNode<T>> children;
+
+
+		private Pattern(Character symbol, int width, Collection<PrintNode<T>> children) {
+			this.symbol = symbol;
+			this.width = width;
+			this.children = children;
+		}
+
+		@Override
+		public Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue) {
+			for(int i=0; i<this.width; i++) {
+				printer.accept("-");
+			}
+			outputQueue.addAll(this.children);
+			return true;
+		}
+	}
+
+	private class LeftBar implements PrintNode<T> {
+
+
+
+		@Override
+		public Boolean apply(Consumer<String> printer, Queue<PrintNode<T>> outputQueue) {
+			return null;
+		}
+
+	}
+
+
+
 	// todo rightmost
 	private class PrintTree implements PrintNode<T> {
 
 		private final TreeNode<T> node;
-		final boolean thisIsRightmostNodeInARow;
 
-		public PrintTree(TreeNode<T> node, boolean thisIsRightmostNodeInARow) {
+		public PrintTree(TreeNode<T> node) {
 			this.node = node;
-			this.thisIsRightmostNodeInARow = thisIsRightmostNodeInARow;
 		}
 
 		@Override
@@ -64,9 +98,17 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				printer.accept(" ");
 			}
 
-			outputQueue.offer(eval.leftSubtree);
-			outputQueue.offer(new Placeholder(eval.subtreeInterval));
-			outputQueue.offer(eval.rightSubtree);
+			final Collection<PrintNode<T>> children = Arrays.asList(
+					eval.leftSubtree,
+					new Whitespace(eval.subtreeInterval),
+					eval.rightSubtree);
+
+			if(this.node.left!=null || this.node.right!=null) {
+				outputQueue.add(new Pattern(eval.totalWidth, children));
+			} else {
+				outputQueue.addAll(children);
+			}
+
 
 			return eval.toBeContinued;
 		}
@@ -94,23 +136,23 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			result.subtreeInterval = (0 == result.labelWidth % 2 ? 2 : 1);
 
 			if(node.left!=null) {
-				final PrintTree subtree = new PrintTree(node.left, false);
+				final PrintTree subtree = new PrintTree(node.left);
 				result.leftSubtree = subtree;
 				result.leftSubtreeWidth = subtree.eval().totalWidth;
 				result.toBeContinued = true;
 			} else {
 				result.leftSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
-				result.leftSubtree = new Placeholder(result.leftSubtreeWidth);
+				result.leftSubtree = new Whitespace(result.leftSubtreeWidth);
 			}
 
 			if(node.right!=null) {
-				final PrintTree subtree = new PrintTree(node.right, this.thisIsRightmostNodeInARow);
+				final PrintTree subtree = new PrintTree(node.right);
 				result.rightSubtree = subtree;
 				result.rightSubtreeWidth = subtree.eval().totalWidth;
 				result.toBeContinued = true;
 			} else {
 				result.rightSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
-				result.rightSubtree = new Placeholder(result.rightSubtreeWidth);
+				result.rightSubtree = new Whitespace(result.rightSubtreeWidth);
 			}
 
 			result.totalWidth = result.leftSubtreeWidth + result.subtreeInterval + result.rightSubtreeWidth;
@@ -152,7 +194,8 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	}
 
 
-    TreeNode<T> root = null;
+
+	TreeNode<T> root = null;
 
 	@Override
 	public boolean add(T value) {
@@ -262,7 +305,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 		Queue<PrintNode<T>> inputQueue = new LinkedList<>();
 		Queue<PrintNode<T>> outputQueue = new LinkedList<>();
-		inputQueue.add(new PrintTree(root, true));
+		inputQueue.add(new PrintTree(root));
 		boolean toBeContinued = false;
 		while(true) {
 			if(inputQueue.isEmpty()) {
