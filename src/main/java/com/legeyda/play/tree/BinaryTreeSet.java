@@ -39,7 +39,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 	}
 
-	/** печать промежутка между деревьями */
+	/** печать горизонтальной линии, под которой промежуток */
 	private static class Line extends PrintNode {
 		private final int width;
 
@@ -51,7 +51,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
 			Collections.nCopies(this.width, "-").forEach(printer);
 			outputQueue.offer(new Whitespace(this.width));
-			return false;
+			return true;
 		}
 	}
 
@@ -175,7 +175,6 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				printer.accept("-");
 			}
 
-			//outputQueue.offer(new Whitespace(eval.leftSubtreeWidth-(eval.labelWidth-1)/2));
 			outputQueue.offer(new PrintTree(node, eval));
 			return true;
 		}
@@ -184,10 +183,6 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	private class PrintRightSubtree extends AbstractPrintTree {
 		public PrintRightSubtree(TreeNode node) {
 			super(node);
-		}
-
-		public PrintRightSubtree(TreeNode node, TreeEvalResult eval) {
-			super(node, eval);
 		}
 
 		@Override
@@ -202,7 +197,6 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 
 			outputQueue.offer(new PrintTree(node, eval));
-			//outputQueue.offer(new Whitespace(eval.leftSubtreeWidth-(eval.labelWidth-1)/2));
 			return true;
 		}
 	}
