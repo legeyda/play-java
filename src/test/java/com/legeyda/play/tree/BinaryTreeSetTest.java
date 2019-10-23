@@ -45,7 +45,6 @@ public class BinaryTreeSetTest {
 		assertThat(testee.add(75)).isFalse();
 		assertThat(testee).hasSize(4).containsExactly(50, 75, 100, 150);
 
-
 	}
 
 	@Test
@@ -66,6 +65,7 @@ public class BinaryTreeSetTest {
 		testee.add(100);
 		testee.add(50);
 		testee.add(150);
+		testee.add(175);
 		testee.add(75);
 		testee.add(60);
 		testee.add(61);
@@ -75,9 +75,13 @@ public class BinaryTreeSetTest {
 
 		assertThat(builder.toString()).isEqualTo(
 "       100\n" +
+"------------\n" +
 "50       150\n" +
-"      75\n" +
+"-------- -----\n" +
+"      75   175\n" +
+"  ------\n" +
 "  60\n" +
+"  ----\n" +
 "    61");
 	}
 

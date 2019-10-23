@@ -34,9 +34,28 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		@Override
 		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
 			Collections.nCopies(this.width, " ").forEach(printer);
+			outputQueue.offer(this);
 			return false;
 		}
 	}
+
+	/** печать промежутка между деревьями */
+	private static class Line extends PrintNode {
+		private final int width;
+
+		public Line(int length) {
+			this.width = length;
+		}
+
+		@Override
+		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+			Collections.nCopies(this.width, "-").forEach(printer);
+			outputQueue.offer(new Whitespace(this.width));
+			return false;
+		}
+	}
+
+
 
 	private abstract class AbstractPrintTree extends PrintNode {
 
@@ -75,24 +94,30 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			// для симметрии, если в надписи чётное число символов, между поддеревьями делаем 2 пробела, иначе 1
 			result.subtreeInterval = (0 == result.labelWidth % 2 ? 2 : 1);
 
-			if(node.left!=null) {
-				final AbstractPrintTree subtree = new PrintLeftSubtree(node.left);
-				result.leftSubtree = subtree;
-				result.leftSubtreeWidth = subtree.eval.totalWidth;
-				result.toBeContinued = true;
-			} else {
-				result.leftSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
-				result.leftSubtree = new Whitespace(result.leftSubtreeWidth);
-			}
 
-			if(node.right!=null) {
-				final AbstractPrintTree subtree = new PrintRightSubtree(node.right);
-				result.rightSubtree = subtree;
-				result.rightSubtreeWidth = subtree.eval.totalWidth;
-				result.toBeContinued = true;
+			if(this.node.left==null && this.node.right==null) {
+				result.leftSubtreeWidth = result.rightSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
+				result.leftSubtree = result.rightSubtree = new Whitespace(result.leftSubtreeWidth);
 			} else {
-				result.rightSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
-				result.rightSubtree = new Whitespace(result.rightSubtreeWidth);
+				if (node.left != null) {
+					final AbstractPrintTree subtree = new PrintLeftSubtree(node.left);
+					result.leftSubtree = subtree;
+					result.leftSubtreeWidth = subtree.eval.totalWidth;
+					result.toBeContinued = true;
+				} else {
+					result.leftSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
+					result.leftSubtree = new Line(result.leftSubtreeWidth);
+				}
+
+				if (node.right != null) {
+					final AbstractPrintTree subtree = new PrintRightSubtree(node.right);
+					result.rightSubtree = subtree;
+					result.rightSubtreeWidth = subtree.eval.totalWidth;
+					result.toBeContinued = true;
+				} else {
+					result.rightSubtreeWidth = (result.labelWidth - result.subtreeInterval) / 2;
+					result.rightSubtree = new Line(result.rightSubtreeWidth);
+				}
 			}
 
 			result.totalWidth = result.leftSubtreeWidth + result.subtreeInterval + result.rightSubtreeWidth;
@@ -101,6 +126,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 	}
 
+	/** печать дерева */
 	private class PrintTree extends AbstractPrintTree {
 
 		public PrintTree(TreeNode node) {
@@ -126,16 +152,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 
 			outputQueue.add(eval.leftSubtree);
-			outputQueue.add(new PrintNode() {
-				@Override
-				public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
-					for(int i=0; i<eval.subtreeInterval; i++) {
-						printer.accept("-");
-					}
-					outputQueue.offer(new Whitespace(eval.subtreeInterval));
-					return true;
-				}
-			});
+			outputQueue.add(node.left!=null || node.right!=null ? new Line(eval.subtreeInterval) : new Whitespace(eval.subtreeInterval));
 			outputQueue.add(eval.rightSubtree);
 
 			return eval.toBeContinued;
@@ -158,6 +175,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				printer.accept("-");
 			}
 
+			//outputQueue.offer(new Whitespace(eval.leftSubtreeWidth-(eval.labelWidth-1)/2));
 			outputQueue.offer(new PrintTree(node, eval));
 			return true;
 		}
@@ -184,6 +202,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 
 			outputQueue.offer(new PrintTree(node, eval));
+			//outputQueue.offer(new Whitespace(eval.leftSubtreeWidth-(eval.labelWidth-1)/2));
 			return true;
 		}
 	}
