@@ -36,8 +36,7 @@ public class AvlTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	 * может быть либо нодой исходного дерева, либо пробельными промежутками между ними
 	 */
 	private abstract static class PrintNode implements BiFunction<Consumer<String>, Consumer<PrintNode>, Boolean> {
-		/** мега метод для печати дерева:
-		 *  печатает в printer текущую строку и заполняет очередь следующего уровня
+		/** печатает в printer текущую строку и заполняет очередь следующего уровня
 		 *  (как обход дерева в ширину)
 		 *  @return true если это нода и у неё есть потомки, false - если просто промежуток пробелов
 		 */
@@ -260,8 +259,9 @@ public class AvlTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	}
 
 
-
 	TreeNode root = null;
+
+
 
 	@Override
 	public boolean add(T value) {
@@ -305,24 +305,6 @@ public class AvlTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		return result;
 	}
 
-	private TreeNode rotateRight(TreeNode p) {
-		TreeNode q = p.left;
-		p.left = q.right;
-		q.right = p;
-		calculateHeight(p);
-		calculateHeight(q);
-		return q;
-	}
-
-	private TreeNode rotateLeft(TreeNode q) {
-		TreeNode p = q.right;
-		q.right = p.left;
-		p.left = q;
-		calculateHeight(q);
-		calculateHeight(p);
-		return p;
-	}
-
 	private TreeNode rebalance(TreeNode node) {
 		calculateHeight(node);
 
@@ -341,17 +323,34 @@ public class AvlTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		return node;
 	}
 
+	private void calculateHeight(TreeNode node) {
+		node.height = (1 + Math.max(height(node.left), height(node.right)));
+	}
+
 	private int height(TreeNode node) {
 		return node!=null ? node.height : 0;
 	}
 
-
-	int balanceFactor(TreeNode node) {
+	private int balanceFactor(TreeNode node) {
 		return node==null ? 0 : height(node.right) - height(node.left);
 	}
 
-	void calculateHeight(TreeNode node) {
-		node.height = (1 + Math.max(height(node.left), height(node.right)));
+	private TreeNode rotateRight(TreeNode p) {
+		TreeNode q = p.left;
+		p.left = q.right;
+		q.right = p;
+		calculateHeight(p);
+		calculateHeight(q);
+		return q;
+	}
+
+	private TreeNode rotateLeft(TreeNode q) {
+		TreeNode p = q.right;
+		q.right = p.left;
+		p.left = q;
+		calculateHeight(q);
+		calculateHeight(p);
+		return p;
 	}
 
 
@@ -420,9 +419,6 @@ public class AvlTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
 
 
-
-
-
 	public String print() {
 		final StringBuilder result = new StringBuilder();
 		this.print(result::append);
@@ -431,7 +427,6 @@ public class AvlTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
 	public void print(final Consumer<String> printer) {
 		final Consumer<String> internalPrinter = new AvoidTrailingSpaces(printer);
-
 
 		// обход дерева в ширину с двумя очередями для отслеживания перехода на следующий уровень
 		if(this.root==null) {
