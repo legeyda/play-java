@@ -1,13 +1,35 @@
 package com.legeyda.play.tree;
 
-import com.google.common.collect.Lists;
-
-import java.util.*;
+import java.util.AbstractSet;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Stack;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
-public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
+public class AvlTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
+
+	private class TreeNode {
+		public T value;
+		public TreeNode left;
+		public TreeNode right;
+		public int height = 0;
+
+		public TreeNode(T value, TreeNode left, TreeNode right) {
+			this.value = value;
+			this.left = left;
+			this.right = right;
+		}
+
+		@Override
+		public String toString() {
+			return "TreeNode{" + (value!=null ? value.toString() + '}' : "null}");
+		}
+	}
+
 
 	/**
 	 * абстрактный элемент для печати дерева:
@@ -60,19 +82,19 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	private abstract class AbstractPrintTree extends PrintNode {
 
 		final TreeNode node;
-		final TreeEvalResult eval;
+		final PrintTreeEvalResult eval;
 
 		public AbstractPrintTree(TreeNode node) {
 			this.node = node;
 			this.eval = this.doEval();
 		}
 
-		public AbstractPrintTree(TreeNode node, TreeEvalResult eval) {
+		public AbstractPrintTree(TreeNode node, PrintTreeEvalResult eval) {
 			this.node = node;
 			this.eval = eval;
 		}
 
-		private TreeEvalResult doEval() {
+		private PrintTreeEvalResult doEval() {
 			// Здесь мы рекурсивно находим ширину каждого поддерева. Нужно ли её кэшировать?
 			// Сравним сложность вычисления ширины каждого поддерева:
 			// без кэширования: время O(n*log(n)) место O(1),
@@ -80,7 +102,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			// Учитывая общую сложность обхода дерева в ширину - время O(n) место O(log^2(n))) -
 			// преимущества кэширования неочевидны, поэтому не будем.
 
-			final TreeEvalResult result = new TreeEvalResult();
+			final PrintTreeEvalResult result = new PrintTreeEvalResult();
 			if(null==node) {
 				return result;
 			}
@@ -133,7 +155,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			super(node);
 		}
 
-		public PrintTree(TreeNode node, TreeEvalResult eval) {
+		public PrintTree(TreeNode node, PrintTreeEvalResult eval) {
 			super(node, eval);
 		}
 
@@ -204,7 +226,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 	}
 
-	private class TreeEvalResult {
+	private class PrintTreeEvalResult {
 		int totalWidth =0, labelWidth =0, subtreeInterval=0, leftSubtreeWidth =0, rightSubtreeWidth =0;
 		PrintNode leftSubtree, rightSubtree;
 		boolean toBeContinued = false;
@@ -243,41 +265,103 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
 	@Override
 	public boolean add(T value) {
+		boolean result = false;
 		if(this.root==null) {
-			this.root = new TreeNode<>(value, null, null);
-			return true;
+			this.root = new TreeNode(value, null, null);
+			result = true;
 		} else {
-			return add(this.root, value);
+			result = add(this.root, value);
+			if(result) {
+				this.root = rebalance(this.root);
+			}
 		}
+		return result;
 	}
 
-	private boolean add(TreeNode<T> node, T value) {
+	private boolean add(TreeNode node, T value) {
+		boolean result = false;
 		final int comparisonResult = value.compareTo(node.value);
 		if(comparisonResult<0) {
 			if(node.left==null) {
-				node.left = new TreeNode<>(value, null, null);
-				return true;
+				node.left = new TreeNode(value, null, null);
+				result = true;
 			} else {
-				return add(node.left, value);
+				result = add(node.left, value);
+			}
+			if(result) {
+				node.left = rebalance(node.left);
 			}
 		} else if(comparisonResult>0) {
 			if(node.right==null) {
-				node.right = new TreeNode<>(value, null, null);
-				return true;
+				node.right = new TreeNode(value, null, null);
+				result = true;
 			} else {
-				return add(node.right, value);
+				result = add(node.right, value);
 			}
-		} else {
-			return false;
+			if(result) {
+				node.right = rebalance(node.right);
+			}
 		}
+		return result;
 	}
+
+	private TreeNode rotateRight(TreeNode p) {
+		TreeNode q = p.left;
+		p.left = q.right;
+		q.right = p;
+		calculateHeight(p);
+		calculateHeight(q);
+		return q;
+	}
+
+	private TreeNode rotateLeft(TreeNode q) {
+		TreeNode p = q.right;
+		q.right = p.left;
+		p.left = q;
+		calculateHeight(q);
+		calculateHeight(p);
+		return p;
+	}
+
+	private TreeNode rebalance(TreeNode node) {
+		calculateHeight(node);
+
+		if(balanceFactor(node)==2) {
+			if(balanceFactor(node.right) < 0) {
+				node.right = rotateRight(node.right);
+			}
+			return rotateLeft(node);
+		}
+		if(balanceFactor(node)==-2) {
+			if(balanceFactor(node.left) > 0) {
+				node.left = rotateLeft(node.left);
+			}
+			return rotateRight(node);
+		}
+		return node;
+	}
+
+	private int height(TreeNode node) {
+		return node!=null ? node.height : 0;
+	}
+
+
+	int balanceFactor(TreeNode node) {
+		return node==null ? 0 : height(node.right) - height(node.left);
+	}
+
+	void calculateHeight(TreeNode node) {
+		node.height = (1 + Math.max(height(node.left), height(node.right)));
+	}
+
+
 
 	@Override
 	public boolean contains(Object value) {
 		return find((T)value, this.root).isPresent();
 	}
 
-	private Optional<TreeNode> find(final T value, final TreeNode<T> node) {
+	private Optional<TreeNode> find(final T value, final TreeNode node) {
 		if(node==null) {
 			return Optional.empty();
 		} else {
@@ -301,7 +385,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	public Iterator<T> inorderIterator() {
 		return new Iterator<T>() {
 			final Stack<TreeNode> stack = new Stack<>();
-			TreeNode node = BinaryTreeSet.this.root;
+			TreeNode node = AvlTreeSet.this.root;
 
 			@Override
 			public boolean hasNext() {
@@ -317,7 +401,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				if(stack.isEmpty()) {
 					throw new RuntimeException("iterator exhausted");
 				}
-				final TreeNode<T> result = stack.pop();
+				final TreeNode result = stack.pop();
 				this.node = result.right;
 				return result.value;
 			}
@@ -338,6 +422,12 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
 
 
+
+	public String print() {
+		final StringBuilder result = new StringBuilder();
+		this.print(result::append);
+		return result.toString();
+	}
 
 	public void print(final Consumer<String> printer) {
 		final Consumer<String> internalPrinter = new AvoidTrailingSpaces(printer);
@@ -371,5 +461,6 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 		}
 	}
+
 
 }

@@ -2,6 +2,7 @@ package com.legeyda.play.tree;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -9,11 +10,11 @@ import java.util.TreeSet;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
-public class BinaryTreeSetTest {
+public class AvlTreeSetTest {
 
 	@Test
 	void simpleTest() {
-		final Set<Integer> testee = new BinaryTreeSet<>();
+		final Set<Integer> testee = new AvlTreeSet<>();
 
 		assertThat(testee).isEmpty();
 
@@ -47,21 +48,31 @@ public class BinaryTreeSetTest {
 
 	}
 
+
+	@Test
+	void simpleTest2() {
+		final Set<Integer> testee = new AvlTreeSet<>();
+		testee.add(65);
+		testee.add(95);
+		testee.add(85);
+		assertThat(testee).containsAll(Arrays.asList(65, 85, 95));
+	}
+
 	@Test
 	void randomizedTest() {
-		final Set<Integer> testee = new BinaryTreeSet<>();
+		final Set<Integer> testee = new AvlTreeSet<>();
 		final Set<Integer> model = new TreeSet<>();
-		for(int i=0; i<1000; i++) {
-			final Integer value = new Random().nextInt(100);
+		for(int i=0; i<10000; i++) {
+			final Integer value = new Random().nextInt(200);
 			assertThat(testee.add(value)).isEqualTo(model.add(value));
-			assertThat(testee).hasSize(model.size()).containsAll(model);
+			assertThat(testee).containsAll(model);
 		}
 	}
 
 
 	@Test
 	void printTest() {
-		final BinaryTreeSet<Integer> testee = new BinaryTreeSet<>();
+		final AvlTreeSet<Integer> testee = new AvlTreeSet<>();
 		testee.add(100);
 		testee.add(50);
 		testee.add(150);
@@ -75,13 +86,11 @@ public class BinaryTreeSetTest {
 
 		assertThat(builder.toString()).isEqualTo(
 "       100\n" +
-"------------\n" +
-"50       150\n" +
+"  ----------\n" +
+"  60     150\n" +
 "-------- -----\n" +
-"      75   175\n" +
-"  ------\n" +
-"  60\n" +
-"  ----\n" +
+"50    75   175\n" +
+"    ----\n" +
 "    61");
 	}
 
