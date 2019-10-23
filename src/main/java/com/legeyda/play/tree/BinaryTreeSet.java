@@ -13,14 +13,14 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 	 * абстрактный элемент для печати дерева:
 	 * может быть либо нодой исходного дерева, либо пробельными промежутками между ними
 	 */
-	private abstract static class PrintNode implements BiFunction<Consumer<String>, Queue<PrintNode>, Boolean> {
+	private abstract static class PrintNode implements BiFunction<Consumer<String>, Consumer<PrintNode>, Boolean> {
 		/** мега метод для печати дерева:
 		 *  печатает в printer текущую строку и заполняет очередь следующего уровня
 		 *  (как обход дерева в ширину)
 		 *  @return true если это нода и у неё есть потомки, false - если просто промежуток пробелов
 		 */
 		@Override
-		abstract public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue);
+		abstract public Boolean apply(Consumer<String> printer, Consumer<PrintNode> outputQueue);
 	}
 
 	/** печать промежутка между деревьями */
@@ -32,9 +32,9 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 
 		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+		public Boolean apply(Consumer<String> printer, Consumer<PrintNode> outputQueue) {
 			Collections.nCopies(this.width, " ").forEach(printer);
-			outputQueue.offer(this);
+			outputQueue.accept(this);
 			return false;
 		}
 	}
@@ -48,9 +48,9 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 
 		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+		public Boolean apply(Consumer<String> printer, Consumer<PrintNode> outputQueue) {
 			Collections.nCopies(this.width, "-").forEach(printer);
-			outputQueue.offer(new Whitespace(this.width));
+			outputQueue.accept(new Whitespace(this.width));
 			return true;
 		}
 	}
@@ -126,7 +126,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 	}
 
-	/** печать дерева */
+	/** деревао печатает свои левое и правое поддеревья */
 	private class PrintTree extends AbstractPrintTree {
 
 		public PrintTree(TreeNode node) {
@@ -138,8 +138,9 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 		}
 
 		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+		public Boolean apply(Consumer<String> printer, Consumer<PrintNode> outputQueue) {
 
+			// есть место равное ширине дерева, примерно поседерине печатаем надпись
 			int charsWritten = 0;
 			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2; charsWritten++) {
 				printer.accept(" ");
@@ -151,21 +152,22 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				printer.accept(" ");
 			}
 
-			outputQueue.add(eval.leftSubtree);
-			outputQueue.add(node.left!=null || node.right!=null ? new Line(eval.subtreeInterval) : new Whitespace(eval.subtreeInterval));
-			outputQueue.add(eval.rightSubtree);
+			outputQueue.accept(eval.leftSubtree);
+			outputQueue.accept(node.left!=null || node.right!=null ? new Line(eval.subtreeInterval) : new Whitespace(eval.subtreeInterval));
+			outputQueue.accept(eval.rightSubtree);
 
 			return eval.toBeContinued;
 		}
 	}
 
+	/** левое поддерево печатает линию направо до конца, и ниже допечатывает себя */
 	private class PrintLeftSubtree extends AbstractPrintTree {
 		public PrintLeftSubtree(TreeNode node) {
 			super(node);
 		}
 
 		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+		public Boolean apply(Consumer<String> printer, Consumer<PrintNode> outputQueue) {
 			int charsWritten = 0;
 			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2; charsWritten++) {
 				printer.accept(" ");
@@ -175,18 +177,19 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				printer.accept("-");
 			}
 
-			outputQueue.offer(new PrintTree(node, eval));
+			outputQueue.accept(new PrintTree(node, eval));
 			return true;
 		}
 	}
 
+	/** правое поддерево печатает линию налево до конца, и ниже допечатывает себя */
 	private class PrintRightSubtree extends AbstractPrintTree {
 		public PrintRightSubtree(TreeNode node) {
 			super(node);
 		}
 
 		@Override
-		public Boolean apply(Consumer<String> printer, Queue<PrintNode> outputQueue) {
+		public Boolean apply(Consumer<String> printer, Consumer<PrintNode> outputQueue) {
 			int charsWritten = 0;
 			for(; charsWritten<eval.leftSubtreeWidth-(eval.labelWidth-1)/2 + eval.labelWidth; charsWritten++) {
 				printer.accept("-");
@@ -196,7 +199,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 				printer.accept(" ");
 			}
 
-			outputQueue.offer(new PrintTree(node, eval));
+			outputQueue.accept(new PrintTree(node, eval));
 			return true;
 		}
 	}
@@ -219,6 +222,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 
 		@Override
 		public void accept(String s) {
+			// вместо печати пробелов запоминаем их количество и печатаем позже по необходимости
 			if(" ".equals(s)) {
 				amountOfSpaces++;
 			} else {
@@ -363,7 +367,7 @@ public class BinaryTreeSet<T extends Comparable<T>> extends AbstractSet<T> {
 			}
 			PrintNode entity = inputQueue.poll();
 			if(entity!=null) {
-				toBeContinued |= entity.apply(internalPrinter, outputQueue);
+				toBeContinued |= entity.apply(internalPrinter, outputQueue::offer);
 			}
 		}
 	}
